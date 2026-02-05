@@ -20,6 +20,9 @@ router.get('/sms', bundleController.getSMSBundles);
 // POST /api/v1/bundles/buy - Purchase a bundle
 router.post('/buy', bundleController.buyBundle);
 
+// POST /api/v1/bundles/confirm/:taskId - Confirm a purchase
+router.post('/confirm/:taskId', bundleController.confirmBundle);
+
 // GET /api/v1/bundles/status/:taskId - Get task status
 router.get('/status/:taskId', bundleController.getTaskStatus);
 
