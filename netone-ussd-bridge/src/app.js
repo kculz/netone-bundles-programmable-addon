@@ -19,21 +19,50 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Auth Middleware
-app.use('/api', (req, res, next) => {
+app.use('/api', async (req, res, next) => {
     const apiKey = req.headers['x-api-key'];
-    
-    if (!apiKey || apiKey !== process.env.API_KEY) {
-        return res.status(401).json({ 
+
+    if (!apiKey) {
+        return res.status(401).json({
             error: 'Unauthorized',
             message: 'Valid API key required in x-api-key header'
         });
     }
-    next();
+
+    try {
+        const ApiKey = require('./models/apikey.model');
+        const { Op } = require('sequelize');
+
+        const keyRecord = await ApiKey.findOne({
+            where: {
+                key: apiKey,
+                isValid: true,
+                expiresAt: {
+                    [Op.gt]: new Date() // Must expire in future
+                }
+            }
+        });
+
+        if (!keyRecord) {
+            return res.status(403).json({
+                error: 'Forbidden',
+                message: 'Invalid or expired API key'
+            });
+        }
+
+        next();
+    } catch (error) {
+        console.error("Auth Error:", error);
+        return res.status(500).json({
+            error: 'Internal Server Error',
+            message: 'Failed to authenticate'
+        });
+    }
 });
 
 // Health check endpoint (no auth required)
 app.get('/health', (req, res) => {
-    res.status(200).json({ 
+    res.status(200).json({
         status: 'ok',
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
@@ -65,7 +94,7 @@ app.use((req, res) => {
 // Global error handler
 app.use((err, req, res, next) => {
     console.error('Error:', err);
-    
+
     res.status(err.status || 500).json({
         error: err.message || 'Internal Server Error',
         ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
