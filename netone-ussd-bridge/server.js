@@ -5,6 +5,11 @@ const { Server } = require('socket.io');
 const ussdService = require('./src/services/ussd.service');
 const Task = require('./src/models/task.model');
 const { sequelize } = require('./src/config/database.config');
+require('./src/queue/task.worker'); // Start the worker
+const { scheduleCleanup } = require('./src/queue/cleanup.queue');
+
+// Schedule cleanup
+scheduleCleanup();
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -22,7 +27,7 @@ io.on('connection', (socket) => {
     socket.on('TASK_RESULT', async (data) => {
         try {
             const { taskId, status, message, error } = data;
-            
+
             console.log(`Task ${taskId} result received:`, { status, message });
 
             const updateData = {
@@ -41,6 +46,15 @@ io.on('connection', (socket) => {
             );
 
             console.log(`Task ${taskId} updated to status: ${status}`);
+
+            // Emit internal event for waiting controllers
+            const taskEvents = require('./src/events/task.events');
+            if (status === 'COMPLETED') {
+                taskEvents.emit(`completed:${taskId}`, { taskId, status, message });
+            } else if (status === 'FAILED') {
+                taskEvents.emit(`failed:${taskId}`, { taskId, status, message: error || message });
+            }
+
         } catch (err) {
             console.error('Error updating task:', err);
         }
@@ -50,11 +64,11 @@ io.on('connection', (socket) => {
     socket.on('REQUEST_CONFIRMATION', async (data) => {
         try {
             const { taskId, recipient, bundleDetails } = data;
-            
+
             console.log(`Confirmation requested for task ${taskId}:`, { recipient, bundleDetails });
 
             await Task.update(
-                { 
+                {
                     status: 'PROCESSING',
                     ussdResponse: 'Waiting for user confirmation on device'
                 },
@@ -73,11 +87,11 @@ io.on('connection', (socket) => {
     socket.on('TASK_PROGRESS', async (data) => {
         try {
             const { taskId, step, message } = data;
-            
+
             console.log(`Task ${taskId} progress - Step ${step}: ${message}`);
 
             await Task.update(
-                { 
+                {
                     ussdResponse: message,
                     updatedAt: new Date()
                 },
@@ -92,11 +106,11 @@ io.on('connection', (socket) => {
     socket.on('TASK_ERROR', async (data) => {
         try {
             const { taskId, error, step } = data;
-            
+
             console.error(`Task ${taskId} error at step ${step}:`, error);
 
             await Task.update(
-                { 
+                {
                     status: 'FAILED',
                     errorMessage: error,
                     ussdResponse: `Failed at step ${step}: ${error}`,
@@ -104,6 +118,11 @@ io.on('connection', (socket) => {
                 },
                 { where: { id: taskId } }
             );
+
+            // Emit internal event for waiting controllers
+            const taskEvents = require('./src/events/task.events');
+            taskEvents.emit(`failed:${taskId}`, { taskId, status: 'FAILED', message: error });
+
         } catch (err) {
             console.error('Error handling task error:', err);
         }
@@ -121,7 +140,7 @@ io.on('connection', (socket) => {
 // Sync database and start server
 sequelize.sync({ alter: true }).then(() => {
     console.log("✅ Database tables synced");
-    
+
     const PORT = process.env.PORT || 3000;
     server.listen(PORT, () => {
         console.log(`🚀 Bridge server running on port ${PORT}`);
