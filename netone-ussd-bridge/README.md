@@ -1,7 +1,7 @@
 # NetOne USSD Bridge API
 
 ## Overview
-This API provides a bridge between external applications (like chatbots/Apps) and NetOne's USSD system for automated bundle purchases via an Android gateway device.
+This API provides a bridge between external applications (like chatbots/Apps) and NetOne's USSD system for automated bundle purchases and balance inquiries via an Android gateway device. It supports both **USD** and **ZWL** currencies.
 
 ## Architecture
 ```
@@ -49,6 +49,9 @@ x-api-key: your_secret_auth_token_for_chatbot/app
 
 Returns all available bundles across all types.
 
+**Query Parameters:**
+- `currency` (optional): `usd` (default) or `zwl`
+
 **Response:**
 ```json
 {
@@ -67,6 +70,9 @@ Returns all available bundles across all types.
 
 Returns all data bundle categories.
 
+**Query Parameters:**
+- `currency` (optional): `usd` (default) or `zwl`
+
 **Response:**
 ```json
 {
@@ -81,10 +87,6 @@ Returns all data bundle categories.
         "price": "$45",
         "currency": "USD",
         "total_data": "100GB",
-        "data_split": {
-          "peak": "80GB",
-          "off_peak": "20GB"
-        },
         "validity": "30 Days"
       }
     ]
@@ -106,26 +108,10 @@ Returns bundles for a specific data category.
 
 **Categories:** `bbb`, `mogigs`, `night`, `daily`, `weekly`, `hourly`
 
-**Example:** `/api/v1/bundles/data/mogigs`
+**Query Parameters:**
+- `currency` (optional): `usd` (default) or `zwl`
 
-**Response:**
-```json
-{
-  "category_id": "mogigs",
-  "category_name": "Mo'Gigs",
-  "description": "Flexible 30-day data bundles",
-  "bundles": [
-    {
-      "id": "mogigs_1",
-      "name": "Mo'Gigs 30 Days",
-      "price": "USD $7",
-      "currency": "USD",
-      "total_data": "5000MB",
-      "validity": "30 Days"
-    }
-  ]
-}
-```
+**Example:** `/api/v1/bundles/data/mogigs?currency=zwl`
 
 ---
 
@@ -134,22 +120,8 @@ Returns bundles for a specific data category.
 
 Returns all social media bundles.
 
-**Response:**
-```json
-{
-  "category_name": "Social Media Bundles",
-  "bundles": [
-    {
-      "id": "social_1",
-      "name": "WhatsApp Daily",
-      "price": "USD $1",
-      "currency": "USD",
-      "platform": "WhatsApp",
-      "validity": "24 Hours"
-    }
-  ]
-}
-```
+**Query Parameters:**
+- `currency` (optional): `usd` (default) or `zwl`
 
 ---
 
@@ -158,22 +130,8 @@ Returns all social media bundles.
 
 Returns all SMS bundles.
 
-**Response:**
-```json
-{
-  "category_name": "SMS Bundles",
-  "bundles": [
-    {
-      "id": "sms_1",
-      "name": "100 SMS",
-      "price": "USD $2",
-      "currency": "USD",
-      "sms_count": 100,
-      "validity": "30 Days"
-    }
-  ]
-}
-```
+**Query Parameters:**
+- `currency` (optional): `usd` (default) or `zwl`
 
 ---
 
@@ -185,57 +143,95 @@ Purchase a bundle for self or another number.
 **Request Body:**
 ```json
 {
-  "bundle_id": "mogigs_1",
+  "bundle_id": "zwl_daily_1",
   "bundle_type": "data",
-  "category": "mogigs",
-  "recipient": "0771234567"
+  "category": "daily",
+  "recipient": "0771234567",
+  "currency": "zwl"
 }
 ```
 
 **Fields:**
 - `bundle_id` (required): Bundle ID from the bundle catalog
 - `bundle_type` (required): One of: `data`, `social_media`, `sms`, `combo`, `voice`
-- `category` (optional): Required for data bundles. One of: `bbb`, `mogigs`, `night`, `daily`, `weekly`, `hourly`
-- `recipient` (optional): Phone number if buying for another person. Omit or use empty string for self-purchase
+- `category` (optional): Required for data bundles (e.g. `daily`, `weekly`)
+- `recipient` (optional): Phone number if buying for another person. Omit or use "self" for self-purchase
+- `currency` (optional): `usd` (default) or `zwl`
 
 **Response:**
 ```json
 {
-  "message": "Bundle purchase task queued. Waiting for confirmation from device.",
+  "message": "Bundle purchase task created. Please confirm to proceed.",
   "taskId": "123e4567-e89b-12d3-a456-426614174000",
+  "status": "PENDING_CONFIRMATION",
   "recipient": "0771234567",
   "bundle": {
-    "id": "mogigs_1",
+    "id": "zwl_daily_1",
     "type": "data",
-    "category": "mogigs"
+    "category": "daily",
+    "currency": "ZWL"
   }
-}
-```
-
-**Example: Purchase for Self**
-```json
-{
-  "bundle_id": "mogigs_1",
-  "bundle_type": "data",
-  "category": "mogigs"
-}
-```
-
-**Example: Purchase for Other**
-```json
-{
-  "bundle_id": "social_1",
-  "bundle_type": "social_media",
-  "recipient": "0771234567"
 }
 ```
 
 ---
 
-### 7. Get Task Status
+### 7. Check Balance
+**POST** `/api/v1/bundles/balance`
+
+Initiate a balance inquiry task.
+
+**Request Body:**
+```json
+{
+  "currency": "zwl"
+}
+```
+
+**Fields:**
+- `currency` (optional): `usd` (default) or `zwl`
+
+**Response:**
+```json
+{
+  "message": "Balance check initiated",
+  "taskId": "uuid...",
+  "status": "QUEUED"
+}
+```
+
+---
+
+### 8. Get Last Balance
+**GET** `/api/v1/bundles/balance/last/:currency`
+
+Retrieve the most recent balance from the database.
+
+**Params:**
+- `currency`: `usd` or `zwl`
+
+**Response:**
+```json
+{
+  "balance": "Your balance is ZWL 500.00",
+  "updatedAt": "2024-02-06T12:00:00.000Z",
+  "currency": "ZWL"
+}
+```
+
+---
+
+### 9. Confirm Task
+**POST** `/api/v1/bundles/confirm/:taskId`
+
+Confirm a pending task to proceed with execution.
+
+---
+
+### 10. Get Task Status
 **GET** `/api/v1/bundles/status/:taskId`
 
-Check the status of a bundle purchase task.
+Check the status of a bundle purchase or balance task.
 
 **Response:**
 ```json
@@ -243,9 +239,9 @@ Check the status of a bundle purchase task.
   "taskId": "123e4567-e89b-12d3-a456-426614174000",
   "status": "COMPLETED",
   "recipient": "0771234567",
-  "bundleId": "mogigs_1",
+  "bundleId": "zwl_daily_1",
   "bundleType": "data",
-  "bundleCategory": "mogigs",
+  "bundleCategory": "daily",
   "ussdResponse": "Bundle successfully purchased",
   "createdAt": "2024-02-06T10:30:00.000Z",
   "updatedAt": "2024-02-06T10:31:00.000Z"
@@ -253,10 +249,12 @@ Check the status of a bundle purchase task.
 ```
 
 **Status Values:**
-- `PENDING`: Task created, waiting to be sent to device
-- `PROCESSING`: Task sent to device, USSD interaction in progress
-- `COMPLETED`: Purchase successful
-- `FAILED`: Purchase failed
+- `PENDING`: Task created
+- `PENDING_CONFIRMATION`: Waiting for user confirmation (API side)
+- `QUEUED`: Queued for execution
+- `PROCESSING`: Sent to gateway, USSD in progress
+- `COMPLETED`: Success
+- `FAILED`: Failed
 
 ---
 
@@ -413,9 +411,10 @@ CREATE TABLE tasks (
   id UUID PRIMARY KEY,
   recipient VARCHAR NOT NULL,
   bundleId VARCHAR NOT NULL,
-  bundleType ENUM('data', 'social_media', 'sms', 'combo', 'voice') NOT NULL,
+  bundleType ENUM('data', 'social_media', 'sms', 'combo', 'voice', 'balance') NOT NULL,
   bundleCategory VARCHAR,
-  status ENUM('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED') DEFAULT 'PENDING',
+  currency ENUM('USD', 'ZWL') DEFAULT 'USD',
+  status ENUM('PENDING', 'PENDING_CONFIRMATION', 'QUEUED', 'PROCESSING', 'COMPLETED', 'FAILED') DEFAULT 'PENDING',
   ussdResponse TEXT,
   externalId VARCHAR,
   errorMessage TEXT,

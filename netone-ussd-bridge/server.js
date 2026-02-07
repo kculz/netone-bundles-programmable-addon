@@ -3,6 +3,7 @@ const http = require('http');
 const app = require('./src/app');
 const { Server } = require('socket.io');
 const ussdService = require('./src/services/ussd.service');
+const ussdResponseParser = require('./src/services/ussd-response.parser');
 const Task = require('./src/models/task.model');
 const { sequelize } = require('./src/config/database.config');
 require('./src/queue/task.worker'); // Start the worker
@@ -26,15 +27,42 @@ io.on('connection', (socket) => {
     // Listen for task result updates
     socket.on('TASK_RESULT', async (data) => {
         try {
-            const { taskId, status, message, error } = data;
+            const { taskId, status, message, error, rawResponse } = data;
 
             console.log(`Task ${taskId} result received:`, { status, message });
 
+            // Get task to determine type and currency for parsing
+            const task = await Task.findByPk(taskId);
+            if (!task) {
+                console.error(`Task ${taskId} not found for result update`);
+                return;
+            }
+
             const updateData = {
                 status: status,
-                ussdResponse: message,
+                statusMessage: message,
                 updatedAt: new Date()
             };
+
+            // Store raw response if provided
+            if (rawResponse) {
+                updateData.rawUssdResponse = rawResponse;
+
+                // Parse the response to extract structured data
+                const parseResult = ussdResponseParser.parse(
+                    rawResponse,
+                    task.bundleType,
+                    task.currency
+                );
+
+                if (parseResult.success) {
+                    updateData.parsedData = parseResult.data;
+                    console.log(`Task ${taskId} parsed data:`, parseResult.data);
+                } else if (parseResult.error) {
+                    console.warn(`Task ${taskId} parsing warning:`, parseResult.error);
+                    updateData.parsedData = { parseError: parseResult.error };
+                }
+            }
 
             if (error) {
                 updateData.errorMessage = error;
@@ -50,7 +78,12 @@ io.on('connection', (socket) => {
             // Emit internal event for waiting controllers
             const taskEvents = require('./src/events/task.events');
             if (status === 'COMPLETED') {
-                taskEvents.emit(`completed:${taskId}`, { taskId, status, message });
+                taskEvents.emit(`completed:${taskId}`, {
+                    taskId,
+                    status,
+                    message,
+                    parsedData: updateData.parsedData
+                });
             } else if (status === 'FAILED') {
                 taskEvents.emit(`failed:${taskId}`, { taskId, status, message: error || message });
             }
@@ -70,7 +103,7 @@ io.on('connection', (socket) => {
             await Task.update(
                 {
                     status: 'PROCESSING',
-                    ussdResponse: 'Waiting for user confirmation on device'
+                    statusMessage: 'Waiting for user confirmation on device'
                 },
                 { where: { id: taskId } }
             );
@@ -86,15 +119,22 @@ io.on('connection', (socket) => {
     // Listen for task progress updates
     socket.on('TASK_PROGRESS', async (data) => {
         try {
-            const { taskId, step, message } = data;
+            const { taskId, step, message, rawResponse } = data;
 
             console.log(`Task ${taskId} progress - Step ${step}: ${message}`);
 
+            const updateData = {
+                statusMessage: message,
+                updatedAt: new Date()
+            };
+
+            // Store intermediate raw responses if provided
+            if (rawResponse) {
+                updateData.rawUssdResponse = rawResponse;
+            }
+
             await Task.update(
-                {
-                    ussdResponse: message,
-                    updatedAt: new Date()
-                },
+                updateData,
                 { where: { id: taskId } }
             );
         } catch (err) {
@@ -113,7 +153,7 @@ io.on('connection', (socket) => {
                 {
                     status: 'FAILED',
                     errorMessage: error,
-                    ussdResponse: `Failed at step ${step}: ${error}`,
+                    statusMessage: `Failed at step ${step}: ${error}`,
                     updatedAt: new Date()
                 },
                 { where: { id: taskId } }
