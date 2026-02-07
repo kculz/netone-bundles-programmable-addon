@@ -1,4 +1,4 @@
-// hooks/useSocketGateway.ts
+// hooks/useSocketGatewayWithCapture.ts
 
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
@@ -6,7 +6,6 @@ import socketService from '../services/SocketService';
 import { initiateUssdDial } from '../services/UssdAutomation';
 import { UssdTaskDetails } from '@/types/types';
 import { addTask, updateTaskStatus } from '@/store/slices/tasksSlice';
-import { useUssdResponseListener } from '../services/UssdBackgroundService';
 
 interface ResponseCaptureState {
     visible: boolean;
@@ -14,31 +13,24 @@ interface ResponseCaptureState {
     taskDescription: string;
 }
 
-export const useSocketGateway = () => {
+export const useSocketGatewayWithCapture = () => {
     const dispatch = useDispatch();
     const [responseCaptureState, setResponseCaptureState] = useState<ResponseCaptureState>({
         visible: false,
         taskId: '',
         taskDescription: ''
     });
-    const [lastNativeResponse, setLastNativeResponse] = useState<string | null>(null);
-
-    // Listen for native USSD responses
-    useUssdResponseListener((response) => {
-        console.log('Received native USSD response:', response);
-        setLastNativeResponse(response);
-    });
 
     const handleResponseSubmit = (rawResponse: string) => {
         const { taskId } = responseCaptureState;
         console.log(`Response captured for task ${taskId}:`, rawResponse);
 
-        // Send response to backend
+        // Send response to backend with rawResponse field
         socketService.emitResult({
             taskId,
             status: 'COMPLETED',
             message: 'USSD response captured',
-            rawResponse
+            rawResponse // This will be parsed by backend
         });
 
         // Update Redux state
@@ -83,21 +75,21 @@ export const useSocketGateway = () => {
                 taskId: taskData.taskId,
                 status: 'PROCESSING',
                 description: taskData.description || `Bundle: ${taskData.bundleType}`,
-                message: 'Task received, preparing execution...',
+                message: 'Starting USSD execution...',
                 timestamp: Date.now()
             }));
 
             try {
-                // Initial progress update
+                // Send progress update - task received
                 socketService.emitProgress({
                     taskId: taskData.taskId,
                     step: 0,
-                    message: 'Task starting...'
+                    message: 'Task received, checking permissions'
                 });
 
                 // Define progress callback for step-by-step updates
                 const onProgress = (step: number, total: number, message: string) => {
-                    console.log(`Task ${taskData.taskId} - [${step}/${total}]: ${message}`);
+                    console.log(`Task ${taskData.taskId} - Step ${step}/${total}: ${message}`);
 
                     // Emit progress to backend
                     socketService.emitProgress({
@@ -110,16 +102,15 @@ export const useSocketGateway = () => {
                     dispatch(updateTaskStatus({
                         taskId: taskData.taskId,
                         status: 'PROCESSING',
-                        message: message // Use the actual message from automation service
+                        message: `Step ${step}/${total}: ${message}`
                     }));
                 };
 
-                // Initiate USSD dial (will be visible on screen)
+                // Initiate USSD dial with sequential execution (visible on screen)
                 const result = await initiateUssdDial(taskData, onProgress);
 
                 if (!result.success) {
-                    console.error('USSD Execution Failed:', result.message);
-
+                    // Send error if dial failed
                     socketService.emitError({
                         taskId: taskData.taskId,
                         error: result.message,
@@ -134,51 +125,46 @@ export const useSocketGateway = () => {
                     return;
                 }
 
-                // Show response capture modal after a delay if native response didn't capture it
-                const delay = taskData.waitForConfirmation ? 4000 : 2000;
-
+                // USSD execution completed - show response capture modal
                 dispatch(updateTaskStatus({
                     taskId: taskData.taskId,
                     status: 'PROCESSING',
-                    message: 'Dialed successfully. Waiting for automated response...'
+                    message: 'USSD executed, please capture the response...'
                 }));
 
+                // Show response capture modal after a delay to let user see USSD response
+                const delay = taskData.waitForConfirmation ? 3000 : 2000;
                 setTimeout(() => {
-                    // If we have a native response, use it
-                    if (lastNativeResponse) {
-                        handleResponseSubmit(lastNativeResponse);
-                        setLastNativeResponse(null); // Clear for next task
-                        return;
-                    }
-
-                    // Otherwise show manual capture modal
                     setResponseCaptureState({
                         visible: true,
                         taskId: taskData.taskId,
-                        taskDescription: taskData.description || `${taskData.bundleType} sequence`
+                        taskDescription: taskData.description || `${taskData.bundleType} - ${taskData.bundleId}`
                     });
                 }, delay);
 
             } catch (error: any) {
-                console.error("Critical error in hook:", error);
+                console.error("Error processing task:", error);
+                const errorMsg = error.message || 'Unknown error occurred';
+
                 socketService.emitError({
                     taskId: taskData.taskId,
-                    error: error.message || 'Hook internal error',
+                    error: errorMsg,
                     step: 0
                 });
 
                 dispatch(updateTaskStatus({
                     taskId: taskData.taskId,
                     status: 'FAILED',
-                    message: error.message
+                    message: errorMsg
                 }));
             }
         };
 
-        // Attach listener
+        // Attach the typed listener
         socketService.onNewTask(handleNewTask);
 
         return () => {
+            // Cleanup listener on unmount
             socketService.socket.off('NEW_USSD_TASK', handleNewTask);
         };
     }, [dispatch]);
