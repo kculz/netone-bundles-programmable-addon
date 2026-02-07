@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.netone.gateway"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +20,14 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "CALL_PHONE",
+        "READ_PHONE_STATE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
+      "package": "com.netone.gateway"
     },
     "web": {
       "output": "static",
@@ -36,6 +44,16 @@
           "backgroundColor": "#ffffff",
           "dark": {
             "backgroundColor": "#000000"
+          }
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 23,
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34
           }
         }
       ]
