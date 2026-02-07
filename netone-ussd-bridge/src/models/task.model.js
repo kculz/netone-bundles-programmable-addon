@@ -17,8 +17,14 @@ const Task = sequelize.define('Task', {
         allowNull: false,
         comment: 'Bundle ID from bundles.json (e.g., bbb_1, mogigs_2, social_1)'
     },
+    currency: {
+        type: DataTypes.ENUM('USD', 'ZWL'),
+        allowNull: false,
+        defaultValue: 'USD',
+        comment: 'Currency of the bundle (USD or ZWL)'
+    },
     bundleType: {
-        type: DataTypes.ENUM('data', 'social_media', 'sms', 'combo', 'voice'),
+        type: DataTypes.ENUM('data', 'social_media', 'sms', 'combo', 'voice', 'balance'),
         allowNull: false
     },
     bundleCategory: {
@@ -30,9 +36,17 @@ const Task = sequelize.define('Task', {
         type: DataTypes.ENUM('PENDING', 'PENDING_CONFIRMATION', 'QUEUED', 'PROCESSING', 'COMPLETED', 'FAILED'),
         defaultValue: 'PENDING'
     },
-    ussdResponse: {
+    statusMessage: {
         type: DataTypes.TEXT,
-        comment: 'Response received from USSD gateway'
+        comment: 'Human-readable status message for UI display'
+    },
+    rawUssdResponse: {
+        type: DataTypes.TEXT,
+        comment: 'Complete raw USSD response text from gateway'
+    },
+    parsedData: {
+        type: DataTypes.JSON,
+        comment: 'Structured data parsed from USSD response (balance, transaction details, etc.)'
     },
     externalId: {
         type: DataTypes.STRING,
