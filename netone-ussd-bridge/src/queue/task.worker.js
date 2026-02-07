@@ -18,7 +18,7 @@ taskQueue.process(async (job) => {
         // Update status to PROCESSING
         await task.update({
             status: 'PROCESSING',
-            ussdResponse: 'Task dequeued, sending to gateway...'
+            statusMessage: 'Task dequeued, sending to gateway...'
         });
 
         // Send to phone
@@ -43,7 +43,7 @@ taskQueue.process(async (job) => {
                     await task.update({
                         status: 'FAILED',
                         errorMessage: error.message,
-                        ussdResponse: 'Max retries exceeded'
+                        statusMessage: 'Max retries exceeded'
                     });
                 }
             } catch (dbError) {
