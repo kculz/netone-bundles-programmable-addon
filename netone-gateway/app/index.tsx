@@ -1,7 +1,9 @@
-// app/index.tsx
 import { useSocketGateway } from '@/hooks/useSocketGateway';
 import socketService from '@/services/SocketService';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Platform, SafeAreaView, Alert } from 'react-native';
+import { UssdResponseCaptureModal } from '@/components/UssdResponseCaptureModal';
+import { checkCallPermission, requestAllPermissions, openAppSettings } from '@/services/PermissionService';
+import { checkAccessibilityPermission, requestAccessibilityPermission } from '@/services/UssdBackgroundService';
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
@@ -12,22 +14,76 @@ export default function HomeScreen() {
     const [isConnected, setIsConnected] = useState(false);
     const [socketId, setSocketId] = useState<string>('');
     const [autoMode, setAutoMode] = useState(true);
+    const [hasCallPermission, setHasCallPermission] = useState<boolean | null>(null);
+    const [isPermissionBlocked, setIsPermissionBlocked] = useState(false);
+    const [isExpoGo, setIsExpoGo] = useState(false);
+    const [isAccessibilityEnabled, setIsAccessibilityEnabled] = useState(false);
 
     const tasks = useSelector((state: RootState) => state.tasks.items);
+    const lastBalance = useSelector((state: RootState) => state.tasks.lastBalance);
 
-    // Initialize the gateway hook
-    useSocketGateway();
+    // Initialize the gateway hook with response capture capabilities
+    const {
+        responseCaptureState,
+        handleResponseSubmit,
+        handleResponseSkip
+    } = useSocketGateway();
 
     useEffect(() => {
-        const checkConnection = setInterval(() => {
+        const checkInitialStatus = async () => {
+            const hasPerm = await checkCallPermission();
+            setHasCallPermission(hasPerm);
+        };
+        checkInitialStatus();
+
+        const checkStatus = setInterval(async () => {
             setIsConnected(socketService.isConnected());
             if (socketService.socket.id) {
                 setSocketId(socketService.socket.id);
             }
+
+            // Periodically check permission status
+            const hasPerm = await checkCallPermission();
+            setHasCallPermission(hasPerm);
+
+            // Check accessibility status
+            const isAccEnabled = await checkAccessibilityPermission();
+            setIsAccessibilityEnabled(isAccEnabled);
         }, 1000);
 
-        return () => clearInterval(checkConnection);
+        return () => clearInterval(checkStatus);
     }, []);
+
+    const handleRequestPermissions = async () => {
+        const result = await requestAllPermissions();
+        setHasCallPermission(result.granted);
+        setIsPermissionBlocked(result.isBlocked || false);
+        setIsExpoGo(result.isExpoGo || false);
+
+        if (result.granted) {
+            Alert.alert('Success', 'Permissions granted! Gateway is ready.');
+        } else if (result.isExpoGo) {
+            Alert.alert(
+                'Expo Go Restricted',
+                'USSD Automation requires "Direct Call" permissions which are blocked in standard Expo Go. You must create a Development Build or Eject to proceed.',
+                [
+                    { text: 'Got it', style: 'cancel' },
+                    { text: 'View Setup Guide', onPress: () => Alert.alert('Setup Guide', 'Run "npx expo prebuild" to create a native Android project where USSD automation is supported.') }
+                ]
+            );
+        } else if (result.isBlocked) {
+            Alert.alert(
+                'Action Required',
+                'Android has blocked the permission request because it was denied multiple times. Please enable "Phone" permission manually in App Settings.',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Open Settings', onPress: openAppSettings }
+                ]
+            );
+        } else {
+            Alert.alert('Error', result.message);
+        }
+    };
 
     const handleReconnect = () => {
         if (!isConnected) {
@@ -70,6 +126,60 @@ export default function HomeScreen() {
                     </View>
                     <View style={styles.divider} />
                     <View style={styles.row}>
+                        <Text style={styles.label}>Permissions</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <View style={[
+                                styles.statusDot,
+                                { backgroundColor: hasCallPermission === null ? '#FF9800' : hasCallPermission ? '#4CAF50' : '#FF5252' }
+                            ]} />
+                            <Text style={[
+                                styles.value,
+                                { color: hasCallPermission === null ? '#FF9800' : hasCallPermission ? '#4CAF50' : '#FF5252' }
+                            ]}>
+                                {hasCallPermission === null ? 'CHECKING...' : hasCallPermission ? 'GRANTED' : isExpoGo ? 'RESTRICTED' : isPermissionBlocked ? 'BLOCKED' : 'MISSING'}
+                            </Text>
+                        </View>
+                    </View>
+                    {hasCallPermission === false && (
+                        <TouchableOpacity
+                            style={[styles.reconnectBtn, { backgroundColor: isExpoGo ? '#5C6BC0' : isPermissionBlocked ? '#607D8B' : '#FF9800' }]}
+                            onPress={isExpoGo ? () => handleRequestPermissions() : (isPermissionBlocked ? openAppSettings : handleRequestPermissions)}
+                        >
+                            <Text style={styles.reconnectText}>
+                                {isExpoGo ? 'Why Restricted?' : isPermissionBlocked ? 'Open System Settings' : 'Grant Permissions'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                    {isExpoGo && (
+                        <Text style={[styles.taskMessage, { marginTop: 10, fontSize: 11, fontStyle: 'italic' }]}>
+                            ⚠️ USSD automation requires a Development Build or Ejection.
+                        </Text>
+                    )}
+                    <View style={styles.row}>
+                        <Text style={styles.label}>Accessibility</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <View style={[
+                                styles.statusDot,
+                                { backgroundColor: isAccessibilityEnabled ? '#4CAF50' : '#FF9800' }
+                            ]} />
+                            <Text style={[
+                                styles.value,
+                                { color: isAccessibilityEnabled ? '#4CAF50' : '#FF9800' }
+                            ]}>
+                                {isAccessibilityEnabled ? 'ENABLED' : 'DISABLED'}
+                            </Text>
+                        </View>
+                    </View>
+                    {!isAccessibilityEnabled && !isExpoGo && (
+                        <TouchableOpacity
+                            style={[styles.reconnectBtn, { backgroundColor: '#5D4037', marginTop: 5 }]}
+                            onPress={requestAccessibilityPermission}
+                        >
+                            <Text style={styles.reconnectText}>Enable Accessibility</Text>
+                        </TouchableOpacity>
+                    )}
+                    <View style={styles.divider} />
+                    <View style={styles.row}>
                         <Text style={styles.label}>Auto-Execution</Text>
                         <Switch
                             value={autoMode}
@@ -83,6 +193,20 @@ export default function HomeScreen() {
                             <Text style={styles.reconnectText}>Reconnect Now</Text>
                         </TouchableOpacity>
                     )}
+                </View>
+
+                {/* Balance Card */}
+                <View style={styles.card}>
+                    <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 15 }]}>Wallet Balance</Text>
+                    <View style={styles.row}>
+                        <Text style={styles.label}>USD Balance</Text>
+                        <Text style={styles.value}>{lastBalance?.USD || 'Unknown'}</Text>
+                    </View>
+                    <View style={styles.divider} />
+                    <View style={styles.row}>
+                        <Text style={styles.label}>ZWL Balance</Text>
+                        <Text style={styles.value}>{lastBalance?.ZWL || 'Unknown'}</Text>
+                    </View>
                 </View>
 
                 <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -149,6 +273,15 @@ export default function HomeScreen() {
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>Powered by Xash.Network</Text>
                 </View>
+
+                {/* USSD Response Capture Modal */}
+                <UssdResponseCaptureModal
+                    visible={responseCaptureState.visible}
+                    taskId={responseCaptureState.taskId}
+                    taskDescription={responseCaptureState.taskDescription}
+                    onSubmit={handleResponseSubmit}
+                    onSkip={handleResponseSkip}
+                />
             </SafeAreaView>
         </LinearGradient>
     );
