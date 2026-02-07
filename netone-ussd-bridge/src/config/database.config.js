@@ -10,9 +10,9 @@ const sequelize = new Sequelize(
     dialect: 'postgres',
     logging: false, // Set to console.log to see SQL queries
     pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
+      max: 20, // Increased from 5 to handle concurrent task processing and API requests
+      min: 2,  // Keep at least 2 connections open
+      acquire: 60000, // Increased to 60s
       idle: 10000
     }
   }
