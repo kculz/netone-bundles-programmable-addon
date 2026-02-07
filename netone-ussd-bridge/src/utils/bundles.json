@@ -2,8 +2,11 @@
   "app_data": {
     "title": "Mobile USSD Bundle Purchase System",
     "description": "Complete JSON structure representing the USSD menu navigation flow and bundle options",
-    "ussd_code": "*379#",
-    "version": "1.0"
+    "ussd_codes": {
+        "usd": "*379#",
+        "zwl": "*171#"
+    },
+    "version": "1.1"
   },
   "menu_flow": {
     "main_menu": {
@@ -13,545 +16,431 @@
         {
           "id": "1",
           "label": "USD Bundle Purchase",
-          "next_screen": "bundle_purchase_menu"
+          "next_screen": "bundle_purchase_menu_usd"
         },
         {
           "id": "2",
+          "label": "ZWL Bundle Purchase",
+          "next_screen": "bundle_purchase_menu_zwl"
+        },
+         {
+          "id": "3",
           "label": "Airtime Credit",
           "next_screen": "airtime_credit"
         },
         {
-          "id": "3",
+          "id": "4",
           "label": "PostPaid Services",
           "next_screen": "postpaid_services"
         },
         {
-          "id": "4",
+          "id": "5",
           "label": "SelfCare & Balance Inquiry",
           "next_screen": "selfcare_balance"
-        }
-      ]
-    },
-    "bundle_purchase_menu": {
-      "screen_id": "bundle_purchase_menu",
-      "title": "USD Bundle Purchase",
-      "options": [
-        {
-          "id": "1",
-          "label": "USD Bundles",
-          "next_screen": "bundle_category_menu"
-        },
-        {
-          "id": "2",
-          "label": "OneFlex Bundles",
-          "next_screen": "oneflex_bundles"
-        },
-        {
-          "id": "3",
-          "label": "Balance Enquiry",
-          "next_screen": "balance_enquiry"
-        }
-      ]
-    },
-    "bundle_category_menu": {
-      "screen_id": "bundle_category_menu",
-      "title": "Select Bundle Category",
-      "options": [
-        {
-          "id": "1",
-          "label": "Data Bundle",
-          "next_screen": "data_bundle_submenu"
-        },
-        {
-          "id": "2",
-          "label": "Social Media Bundle",
-          "next_screen": "social_media_bundles"
-        },
-        {
-          "id": "3",
-          "label": "SMS",
-          "next_screen": "sms_bundles"
-        },
-        {
-          "id": "4",
-          "label": "Combo",
-          "next_screen": "combo_bundles"
-        },
-        {
-          "id": "5",
-          "label": "Voice Bundle",
-          "next_screen": "voice_bundles"
-        }
-      ]
-    },
-    "data_bundle_submenu": {
-      "screen_id": "data_bundle_submenu",
-      "title": "Select Data Bundle",
-      "options": [
-        {
-          "id": "1",
-          "label": "BBB (Big beautiful bundles)",
-          "category_id": "bbb",
-          "next_screen": "bundle_list"
-        },
-        {
-          "id": "2",
-          "label": "Mo'Gigs",
-          "category_id": "mogigs",
-          "next_screen": "bundle_list"
-        },
-        {
-          "id": "3",
-          "label": "Night Bundles",
-          "category_id": "night",
-          "next_screen": "bundle_list"
-        },
-        {
-          "id": "4",
-          "label": "Daily Bundles",
-          "category_id": "daily",
-          "next_screen": "bundle_list"
-        },
-        {
-          "id": "5",
-          "label": "Weekly Bundles",
-          "category_id": "weekly",
-          "next_screen": "bundle_list"
-        },
-        {
-          "id": "6",
-          "label": "AmaSixty-Sixty Hourly Bundles",
-          "category_id": "hourly",
-          "next_screen": "bundle_list"
         }
       ]
     }
   },
   "bundle_catalog": {
-    "data_bundles": {
-      "bbb": {
-        "category_id": "bbb",
-        "category_name": "BBB (Big Beautiful Bundles)",
-        "description": "Monthly data bundles with peak and off-peak allocations",
-        "bundles": [
-          {
-            "id": "bbb_1",
-            "name": "BBB 100",
-            "price": "$45",
-            "currency": "USD",
-            "total_data": "100GB",
-            "data_split": {
-              "peak": "80GB",
-              "off_peak": "20GB"
+    "usd": {
+      "data_bundles": {
+        "bbb": {
+          "category_id": "bbb",
+          "category_name": "BBB (Big Beautiful Bundles)",
+          "description": "Monthly data bundles with peak and off-peak allocations",
+          "bundles": [
+            {
+              "id": "bbb_1",
+              "name": "BBB 100",
+              "price": "$45",
+              "currency": "USD",
+              "total_data": "100GB",
+              "data_split": {
+                "peak": "80GB",
+                "off_peak": "20GB"
+              },
+              "validity": "30 Days"
             },
-            "validity": "30 Days"
-          },
-          {
-            "id": "bbb_2",
-            "name": "BBB 150",
-            "price": "$80",
-            "currency": "USD",
-            "total_data": "150GB",
-            "data_split": {
-              "peak": "100GB",
-              "off_peak": "50GB"
+            {
+              "id": "bbb_2",
+              "name": "BBB 150",
+              "price": "$80",
+              "currency": "USD",
+              "total_data": "150GB",
+              "data_split": {
+                "peak": "100GB",
+                "off_peak": "50GB"
+              },
+              "validity": "30 Days"
             },
-            "validity": "30 Days"
-          },
-          {
-            "id": "bbb_3",
-            "name": "BBB 200",
-            "price": "$130",
-            "currency": "USD",
-            "total_data": "200GB",
-            "data_split": {
-              "peak": "160GB",
-              "off_peak": "40GB"
+            {
+              "id": "bbb_3",
+              "name": "BBB 200",
+              "price": "$130",
+              "currency": "USD",
+              "total_data": "200GB",
+              "data_split": {
+                "peak": "160GB",
+                "off_peak": "40GB"
+              },
+              "validity": "30 Days"
+            }
+          ]
+        },
+        "mogigs": {
+          "category_id": "mogigs",
+          "category_name": "Mo'Gigs",
+          "description": "Flexible 30-day data bundles",
+          "bundles": [
+            {
+              "id": "mogigs_1",
+              "name": "Mo'Gigs 30 Days",
+              "price": "USD $7",
+              "currency": "USD",
+              "total_data": "5000MB",
+              "data_split": {
+                "peak": "4000MB",
+                "off_peak": "1000MB"
+              },
+              "validity": "30 Days"
             },
-            "validity": "30 Days"
-          }
-        ]
+            {
+              "id": "mogigs_2",
+              "name": "Mo'Gigs 30 Days",
+              "price": "USD $12",
+              "currency": "USD",
+              "total_data": "10000MB",
+              "data_split": {
+                "peak": "8000MB",
+                "off_peak": "2000MB"
+              },
+              "validity": "30 Days"
+            },
+            {
+              "id": "mogigs_3",
+              "name": "Mo'Gigs 30 Days",
+              "price": "USD $15",
+              "currency": "USD",
+              "total_data": "15000MB",
+              "validity": "30 Days"
+            },
+            {
+              "id": "mogigs_5",
+              "name": "Mo'Gigs 30 Days",
+              "price": "USD $50",
+              "currency": "USD",
+              "total_data": "50000MB",
+              "data_split": {
+                "peak": "42000MB",
+                "off_peak": "8000MB"
+              },
+              "validity": "30 Days"
+            }
+          ]
+        },
+        "night": {
+          "category_id": "night",
+          "category_name": "Night Bundles",
+          "description": "Data bundles for night-time usage",
+          "bundles": [
+            {
+              "id": "night_1",
+              "name": "Night Data Bundle",
+              "price": "USD $1",
+              "currency": "USD",
+              "data_amount": "1200MB",
+              "validity": "1 Night",
+              "active_hours": "12:00 AM - 6:00 AM"
+            }
+          ]
+        },
+        "daily": {
+          "category_id": "daily",
+          "category_name": "Daily Bundles",
+          "description": "24-hour data bundles",
+          "bundles": [
+            {
+              "id": "daily_1",
+              "name": "Daily Data Bundle",
+              "price": "USD $1.50",
+              "currency": "USD",
+              "data_amount": "300MB",
+              "validity": "24 Hours"
+            },
+            {
+              "id": "daily_2",
+              "name": "Data Daily Bundle",
+              "price": "USD $3",
+              "currency": "USD",
+              "data_amount": "650MB",
+              "validity": "24 Hours"
+            }
+          ]
+        },
+        "weekly": {
+          "category_id": "weekly",
+          "category_name": "Weekly Bundles",
+          "description": "7-day data bundles",
+          "bundles": [
+            {
+              "id": "weekly_1",
+              "name": "Weekly Data Bundle",
+              "price": "USD $3",
+              "currency": "USD",
+              "data_amount": "500MB",
+              "validity": "7 Days"
+            },
+            {
+              "id": "weekly_2",
+              "name": "Data Weekly Bundle",
+              "price": "USD $4",
+              "currency": "USD",
+              "data_amount": "1000MB",
+              "validity": "7 Days"
+            }
+          ]
+        },
+        "hourly": {
+          "category_id": "hourly",
+          "category_name": "AmaSixty-Sixty Hourly Bundles",
+          "description": "Short-duration high-speed data bundles",
+          "bundles": [
+            {
+              "id": "hourly_1",
+              "name": "AmaSixty 1 Hour",
+              "price": "USD $1",
+              "currency": "USD",
+              "data_amount": "1.17 GB",
+              "duration": "1 Hour",
+              "validity": "1 Hour"
+            },
+            {
+              "id": "hourly_2",
+              "name": "AmaSixty 2 Hours",
+              "price": "USD $2",
+              "currency": "USD",
+              "data_amount": "2.92 GB",
+              "duration": "2 Hours",
+              "validity": "2 Hours"
+            }
+          ]
+        }
       },
-      "mogigs": {
-        "category_id": "mogigs",
-        "category_name": "Mo'Gigs",
-        "description": "Flexible 30-day data bundles",
+      "social_media_bundles": {
+        "category_name": "Social Media Bundles",
         "bundles": [
           {
-            "id": "mogigs_1",
-            "name": "Mo'Gigs 30 Days",
-            "price": "USD $7",
-            "currency": "USD",
-            "total_data": "5000MB",
-            "data_split": {
-              "peak": "4000MB",
-              "off_peak": "1000MB"
-            },
-            "validity": "30 Days"
-          },
-          {
-            "id": "mogigs_2",
-            "name": "Mo'Gigs 30 Days",
-            "price": "USD $12",
-            "currency": "USD",
-            "total_data": "10000MB",
-            "data_split": {
-              "peak": "8000MB",
-              "off_peak": "2000MB"
-            },
-            "validity": "30 Days"
-          },
-          {
-            "id": "mogigs_3",
-            "name": "Mo'Gigs 30 Days",
-            "price": "USD $15",
-            "currency": "USD",
-            "total_data": "15000MB",
-            "validity": "30 Days"
-          },
-          {
-            "id": "mogigs_5",
-            "name": "Mo'Gigs 30 Days",
-            "price": "USD $50",
-            "currency": "USD",
-            "total_data": "50000MB",
-            "data_split": {
-              "peak": "42000MB",
-              "off_peak": "8000MB"
-            },
-            "validity": "30 Days"
-          }
-        ]
-      },
-      "night": {
-        "category_id": "night",
-        "category_name": "Night Bundles",
-        "description": "Data bundles for night-time usage",
-        "bundles": [
-          {
-            "id": "night_1",
-            "name": "Night Data Bundle",
+            "id": "social_1",
+            "name": "WhatsApp Daily",
             "price": "USD $1",
             "currency": "USD",
-            "data_amount": "1200MB",
-            "validity": "1 Night",
-            "active_hours": "12:00 AM - 6:00 AM"
-          }
-        ]
-      },
-      "daily": {
-        "category_id": "daily",
-        "category_name": "Daily Bundles",
-        "description": "24-hour data bundles",
-        "bundles": [
-          {
-            "id": "daily_1",
-            "name": "Daily Data Bundle",
-            "price": "USD $1.50",
-            "currency": "USD",
-            "data_amount": "300MB",
+            "platform": "WhatsApp",
             "validity": "24 Hours"
           },
           {
-            "id": "daily_2",
-            "name": "Data Daily Bundle",
+            "id": "social_2",
+            "name": "Facebook Weekly",
             "price": "USD $3",
             "currency": "USD",
-            "data_amount": "650MB",
-            "validity": "24 Hours"
-          }
-        ]
-      },
-      "weekly": {
-        "category_id": "weekly",
-        "category_name": "Weekly Bundles",
-        "description": "7-day data bundles",
-        "bundles": [
-          {
-            "id": "weekly_1",
-            "name": "Weekly Data Bundle",
-            "price": "USD $3",
-            "currency": "USD",
-            "data_amount": "500MB",
+            "platform": "Facebook",
             "validity": "7 Days"
           },
           {
-            "id": "weekly_2",
-            "name": "Data Weekly Bundle",
-            "price": "USD $4",
+            "id": "social_3",
+            "name": "Instagram Monthly",
+            "price": "USD $10",
             "currency": "USD",
-            "data_amount": "1000MB",
-            "validity": "7 Days"
-          }
-        ]
-      },
-      "hourly": {
-        "category_id": "hourly",
-        "category_name": "AmaSixty-Sixty Hourly Bundles",
-        "description": "Short-duration high-speed data bundles",
-        "bundles": [
-          {
-            "id": "hourly_1",
-            "name": "AmaSixty 1 Hour",
-            "price": "USD $1",
-            "currency": "USD",
-            "data_amount": "1.17 GB",
-            "duration": "1 Hour",
-            "validity": "1 Hour"
+            "platform": "Instagram",
+            "validity": "30 Days"
           },
           {
-            "id": "hourly_2",
-            "name": "AmaSixty 2 Hours",
+            "id": "social_4",
+            "name": "Twitter Weekly",
             "price": "USD $2",
             "currency": "USD",
-            "data_amount": "2.92 GB",
-            "duration": "2 Hours",
-            "validity": "2 Hours"
+            "platform": "Twitter",
+            "validity": "7 Days"
+          }
+        ]
+      },
+      "sms_bundles": {
+        "category_name": "SMS Bundles",
+        "bundles": [
+          {
+            "id": "sms_1",
+            "name": "100 SMS",
+            "price": "USD $2",
+            "currency": "USD",
+            "sms_count": 100,
+            "validity": "30 Days"
+          },
+          {
+            "id": "sms_2",
+            "name": "500 SMS",
+            "price": "USD $8",
+            "currency": "USD",
+            "sms_count": 500,
+            "validity": "30 Days"
+          },
+          {
+            "id": "sms_3",
+            "name": "1000 SMS",
+            "price": "USD $15",
+            "currency": "USD",
+            "sms_count": 1000,
+            "validity": "30 Days"
+          }
+        ]
+      },
+      "combo_bundles": {
+        "category_name": "Combo Bundles",
+        "description": "Bundles combining data, voice, and SMS",
+        "bundles": [
+          {
+            "id": "combo_1",
+            "name": "Combo Basic",
+            "price": "USD $20",
+            "currency": "USD",
+            "data": "5GB",
+            "voice_minutes": 100,
+            "sms_count": 100,
+            "validity": "30 Days"
+          },
+          {
+            "id": "combo_2",
+            "name": "Combo Plus",
+            "price": "USD $35",
+            "currency": "USD",
+            "data": "10GB",
+            "voice_minutes": 200,
+            "sms_count": 200,
+            "validity": "30 Days"
+          },
+          {
+            "id": "combo_3",
+            "name": "Combo Premium",
+            "price": "USD $60",
+            "currency": "USD",
+            "data": "20GB",
+            "voice_minutes": 500,
+            "sms_count": 500,
+            "validity": "30 Days"
+          }
+        ]
+      },
+      "voice_bundles": {
+        "category_name": "Voice Bundles",
+        "bundles": [
+          {
+            "id": "voice_1",
+            "name": "50 Minutes",
+            "price": "USD $5",
+            "currency": "USD",
+            "voice_minutes": 50,
+            "validity": "30 Days"
+          },
+          {
+            "id": "voice_2",
+            "name": "100 Minutes",
+            "price": "USD $9",
+            "currency": "USD",
+            "voice_minutes": 100,
+            "validity": "30 Days"
+          },
+          {
+            "id": "voice_3",
+            "name": "250 Minutes",
+            "price": "USD $20",
+            "currency": "USD",
+            "voice_minutes": 250,
+            "validity": "30 Days"
+          },
+          {
+            "id": "voice_4",
+            "name": "500 Minutes",
+            "price": "USD $35",
+            "currency": "USD",
+            "voice_minutes": 500,
+            "validity": "30 Days"
           }
         ]
       }
     },
-    "social_media_bundles": {
-      "category_name": "Social Media Bundles",
-      "bundles": [
-        {
-          "id": "social_1",
-          "name": "WhatsApp Daily",
-          "price": "USD $1",
-          "currency": "USD",
-          "platform": "WhatsApp",
-          "validity": "24 Hours"
+    "zwl": {
+        "data_bundles": {
+          "daily": {
+            "category_id": "daily",
+            "category_name": "Daily Bundles",
+            "description": "24-hour data bundles",
+            "bundles": [
+              {
+                "id": "zwl_daily_1",
+                "name": "ZWL Daily 100MB",
+                "price": "ZWL $500",
+                "currency": "ZWL",
+                "data_amount": "100MB",
+                "validity": "24 Hours"
+              },
+              {
+                "id": "zwl_daily_2",
+                "name": "ZWL Daily 250MB",
+                "price": "ZWL $1000",
+                "currency": "ZWL",
+                "data_amount": "250MB",
+                "validity": "24 Hours"
+              }
+            ]
+          },
+          "weekly": {
+            "category_id": "weekly",
+            "category_name": "Weekly Bundles",
+            "description": "7-day data bundles",
+            "bundles": [
+              {
+                "id": "zwl_weekly_1",
+                "name": "ZWL Weekly 500MB",
+                "price": "ZWL $2000",
+                "currency": "ZWL",
+                "data_amount": "500MB",
+                "validity": "7 Days"
+              }
+            ]
+          }
         },
-        {
-          "id": "social_2",
-          "name": "Facebook Weekly",
-          "price": "USD $3",
-          "currency": "USD",
-          "platform": "Facebook",
-          "validity": "7 Days"
+        "voice_bundles": {
+            "category_name": "Voice Bundles",
+            "bundles": [
+                {
+                    "id": "zwl_voice_1",
+                    "name": "ZWL Voice 10 Mins",
+                    "price": "ZWL $300",
+                    "currency": "ZWL",
+                    "voice_minutes": 10,
+                    "validity": "24 Hours"
+                }
+            ]
         },
-        {
-          "id": "social_3",
-          "name": "Instagram Monthly",
-          "price": "USD $10",
-          "currency": "USD",
-          "platform": "Instagram",
-          "validity": "30 Days"
+        "social_media_bundles": {
+           "category_name": "Social Media Bundles",
+           "bundles": []
         },
-        {
-          "id": "social_4",
-          "name": "Twitter Weekly",
-          "price": "USD $2",
-          "currency": "USD",
-          "platform": "Twitter",
-          "validity": "7 Days"
+        "sms_bundles": {
+            "category_name": "SMS Bundles",
+            "bundles": []
+        },
+         "combo_bundles": {
+            "category_name": "Combo Bundles",
+            "bundles": []
         }
-      ]
-    },
-    "sms_bundles": {
-      "category_name": "SMS Bundles",
-      "bundles": [
-        {
-          "id": "sms_1",
-          "name": "100 SMS",
-          "price": "USD $2",
-          "currency": "USD",
-          "sms_count": 100,
-          "validity": "30 Days"
-        },
-        {
-          "id": "sms_2",
-          "name": "500 SMS",
-          "price": "USD $8",
-          "currency": "USD",
-          "sms_count": 500,
-          "validity": "30 Days"
-        },
-        {
-          "id": "sms_3",
-          "name": "1000 SMS",
-          "price": "USD $15",
-          "currency": "USD",
-          "sms_count": 1000,
-          "validity": "30 Days"
-        }
-      ]
-    },
-    "combo_bundles": {
-      "category_name": "Combo Bundles",
-      "description": "Bundles combining data, voice, and SMS",
-      "bundles": [
-        {
-          "id": "combo_1",
-          "name": "Combo Basic",
-          "price": "USD $20",
-          "currency": "USD",
-          "data": "5GB",
-          "voice_minutes": 100,
-          "sms_count": 100,
-          "validity": "30 Days"
-        },
-        {
-          "id": "combo_2",
-          "name": "Combo Plus",
-          "price": "USD $35",
-          "currency": "USD",
-          "data": "10GB",
-          "voice_minutes": 200,
-          "sms_count": 200,
-          "validity": "30 Days"
-        },
-        {
-          "id": "combo_3",
-          "name": "Combo Premium",
-          "price": "USD $60",
-          "currency": "USD",
-          "data": "20GB",
-          "voice_minutes": 500,
-          "sms_count": 500,
-          "validity": "30 Days"
-        }
-      ]
-    },
-    "voice_bundles": {
-      "category_name": "Voice Bundles",
-      "bundles": [
-        {
-          "id": "voice_1",
-          "name": "50 Minutes",
-          "price": "USD $5",
-          "currency": "USD",
-          "voice_minutes": 50,
-          "validity": "30 Days"
-        },
-        {
-          "id": "voice_2",
-          "name": "100 Minutes",
-          "price": "USD $9",
-          "currency": "USD",
-          "voice_minutes": 100,
-          "validity": "30 Days"
-        },
-        {
-          "id": "voice_3",
-          "name": "250 Minutes",
-          "price": "USD $20",
-          "currency": "USD",
-          "voice_minutes": 250,
-          "validity": "30 Days"
-        },
-        {
-          "id": "voice_4",
-          "name": "500 Minutes",
-          "price": "USD $35",
-          "currency": "USD",
-          "voice_minutes": 500,
-          "validity": "30 Days"
-        }
-      ]
     }
   },
   "purchase_flow": {
     "steps": [
-      {
+       {
         "step_id": 1,
         "step_name": "dial_ussd",
-        "action": "User dials *379#",
+        "action": "User dials *379# (USD) or *171# (ZWL)",
         "next_step": 2
-      },
-      {
-        "step_id": 2,
-        "step_name": "main_menu",
-        "action": "Display main menu options",
-        "screen": "main_menu",
-        "next_step": 3
-      },
-      {
-        "step_id": 3,
-        "step_name": "select_bundle_purchase",
-        "action": "User selects 'USD Bundle Purchase'",
-        "next_step": 4
-      },
-      {
-        "step_id": 4,
-        "step_name": "bundle_type_menu",
-        "action": "Display bundle type options",
-        "screen": "bundle_purchase_menu",
-        "next_step": 5
-      },
-      {
-        "step_id": 5,
-        "step_name": "select_usd_bundles",
-        "action": "User selects 'USD Bundles'",
-        "next_step": 6
-      },
-      {
-        "step_id": 6,
-        "step_name": "bundle_category_selection",
-        "action": "Display bundle categories (Data, Social Media, SMS, Combo, Voice)",
-        "screen": "bundle_category_menu",
-        "next_step": 7
-      },
-      {
-        "step_id": 7,
-        "step_name": "select_category",
-        "action": "User selects a bundle category",
-        "next_step": 8
-      },
-      {
-        "step_id": 8,
-        "step_name": "bundle_list_display",
-        "action": "Display available bundles in selected category",
-        "screen": "bundle_list",
-        "next_step": 9
-      },
-      {
-        "step_id": 9,
-        "step_name": "select_specific_bundle",
-        "action": "User selects a specific bundle",
-        "next_step": 10
-      },
-      {
-        "step_id": 10,
-        "step_name": "buying_option",
-        "action": "User chooses buying option (Self or Other)",
-        "screen": "buying_option",
-        "options": [
-          {
-            "id": "self",
-            "label": "Self",
-            "description": "Purchase for own number",
-            "next_step": 12
-          },
-          {
-            "id": "other",
-            "label": "Other",
-            "description": "Purchase for another number",
-            "next_step": 11
-          }
-        ]
-      },
-      {
-        "step_id": 11,
-        "step_name": "enter_recipient_number",
-        "action": "User enters recipient phone number",
-        "screen": "enter_number",
-        "input_type": "phone_number",
-        "next_step": 12
-      },
-      {
-        "step_id": 12,
-        "step_name": "confirm_purchase",
-        "action": "Display confirmation and process purchase",
-        "screen": "confirmation",
-        "next_step": 13
-      },
-      {
-        "step_id": 13,
-        "step_name": "purchase_complete",
-        "action": "Show success message and bundle activation",
-        "screen": "success",
-        "final_step": true
       }
     ]
   }
