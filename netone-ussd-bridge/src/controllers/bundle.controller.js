@@ -5,7 +5,8 @@ const taskQueue = require('../queue/task.queue');
 
 exports.getAllBundles = async (req, res) => {
     try {
-        const bundles = bundleService.getAllBundles();
+        const { currency } = req.query;
+        const bundles = bundleService.getAllBundles(currency);
         res.status(200).json(bundles);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -14,7 +15,8 @@ exports.getAllBundles = async (req, res) => {
 
 exports.getDataBundles = async (req, res) => {
     try {
-        const dataBundles = bundleService.getDataBundles();
+        const { currency } = req.query;
+        const dataBundles = bundleService.getDataBundles(currency);
         res.status(200).json(dataBundles);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -24,7 +26,8 @@ exports.getDataBundles = async (req, res) => {
 exports.getDataBundlesByCategory = async (req, res) => {
     try {
         const { category } = req.params;
-        const bundles = bundleService.getDataBundlesByCategory(category);
+        const { currency } = req.query;
+        const bundles = bundleService.getDataBundlesByCategory(category, currency);
 
         if (!bundles) {
             return res.status(404).json({ error: 'Category not found' });
@@ -38,7 +41,8 @@ exports.getDataBundlesByCategory = async (req, res) => {
 
 exports.getSocialMediaBundles = async (req, res) => {
     try {
-        const socialBundles = bundleService.getSocialMediaBundles();
+        const { currency } = req.query;
+        const socialBundles = bundleService.getSocialMediaBundles(currency);
         res.status(200).json(socialBundles);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -47,7 +51,8 @@ exports.getSocialMediaBundles = async (req, res) => {
 
 exports.getSMSBundles = async (req, res) => {
     try {
-        const smsBundles = bundleService.getSMSBundles();
+        const { currency } = req.query;
+        const smsBundles = bundleService.getSMSBundles(currency);
         res.status(200).json(smsBundles);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -56,7 +61,7 @@ exports.getSMSBundles = async (req, res) => {
 
 exports.buyBundle = async (req, res) => {
     try {
-        const { recipient, bundle_id, bundle_type, category } = req.body;
+        const { recipient, bundle_id, bundle_type, category, currency } = req.body;
 
         // Validate required fields
         if (!bundle_id || !bundle_type) {
@@ -66,7 +71,7 @@ exports.buyBundle = async (req, res) => {
         }
 
         // Validate bundle exists
-        const bundleExists = bundleService.validateBundle(bundle_id, bundle_type, category);
+        const bundleExists = bundleService.validateBundle(bundle_id, bundle_type, category, currency);
         if (!bundleExists) {
             return res.status(404).json({
                 error: 'Bundle not found'
@@ -81,6 +86,7 @@ exports.buyBundle = async (req, res) => {
             bundleId: bundle_id,
             bundleType: bundle_type,
             bundleCategory: category || null,
+            currency: currency || 'USD',
             status: 'PENDING_CONFIRMATION'
         });
 
@@ -93,8 +99,37 @@ exports.buyBundle = async (req, res) => {
             bundle: {
                 id: bundle_id,
                 type: bundle_type,
-                category: category
+                category: category,
+                currency: task.currency
             }
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.checkBalance = async (req, res) => {
+    try {
+        const { currency } = req.body;
+        const task = await Task.create({
+            recipient: 'self',
+            bundleId: 'balance_check',
+            bundleType: 'balance',
+            currency: currency || 'USD',
+            status: 'PENDING' // Auto-process, no confirmation for balance
+        });
+
+        // Add to queue immediately
+        await task.update({ status: 'QUEUED' });
+        await taskQueue.add({ id: task.id }, {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 5000 }
+        });
+
+        res.status(202).json({
+            message: "Balance check initiated",
+            taskId: task.id,
+            status: 'QUEUED'
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -212,9 +247,38 @@ exports.getTaskStatus = async (req, res) => {
             bundleId: task.bundleId,
             bundleType: task.bundleType,
             bundleCategory: task.bundleCategory,
-            ussdResponse: task.ussdResponse,
+            statusMessage: task.statusMessage,
+            parsedData: task.parsedData,
+            rawResponse: task.rawUssdResponse,
             createdAt: task.createdAt,
             updatedAt: task.updatedAt
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.getLastBalance = async (req, res) => {
+    try {
+        const { currency } = req.params;
+        const task = await Task.findOne({
+            where: {
+                bundleType: 'balance',
+                currency: currency ? currency.toUpperCase() : 'USD',
+                status: 'COMPLETED'
+            },
+            order: [['updatedAt', 'DESC']]
+        });
+
+        if (!task) {
+            return res.status(404).json({ message: "No balance history found" });
+        }
+
+        res.json({
+            balance: task.parsedData || { raw: task.statusMessage },
+            statusMessage: task.statusMessage,
+            updatedAt: task.updatedAt,
+            currency: task.currency
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
