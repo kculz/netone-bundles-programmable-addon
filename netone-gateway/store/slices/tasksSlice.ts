@@ -11,11 +11,19 @@ export interface Task {
 interface TasksState {
     items: Task[];
     executingTaskId: string | null;
+    lastBalance: {
+        USD: string;
+        ZWL: string;
+    };
 }
 
 const initialState: TasksState = {
     items: [],
     executingTaskId: null,
+    lastBalance: {
+        USD: 'Unknown',
+        ZWL: 'Unknown'
+    }
 };
 
 const tasksSlice = createSlice({
@@ -44,6 +52,9 @@ const tasksSlice = createSlice({
                 }
             }
         },
+        updateBalance: (state, action: PayloadAction<{ currency: 'USD' | 'ZWL'; balance: string }>) => {
+            state.lastBalance[action.payload.currency] = action.payload.balance;
+        },
         // To handle incoming queue list if we fetch it
         setTasks: (state, action: PayloadAction<Task[]>) => {
             state.items = action.payload;
@@ -51,5 +62,5 @@ const tasksSlice = createSlice({
     },
 });
 
-export const { addTask, updateTaskStatus, setTasks } = tasksSlice.actions;
+export const { addTask, updateTaskStatus, updateBalance, setTasks } = tasksSlice.actions;
 export default tasksSlice.reducer;
