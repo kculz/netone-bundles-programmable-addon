@@ -2,8 +2,8 @@
 
 export interface UssdTaskDetails {
     taskId: string;
-    recipient: string;
-    bundleType: 'data' | 'social_media' | 'sms' | 'combo' | 'voice' | 'balance';
+    recipient?: string; // Optional for system tasks like balance check
+    bundleType: 'data' | 'social_media' | 'sms' | 'combo' | 'voice' | 'balance' | 'NETONE_MENU' | 'NETONE_BALANCE';
     bundleId: string;
     code: string;
     steps: string[];

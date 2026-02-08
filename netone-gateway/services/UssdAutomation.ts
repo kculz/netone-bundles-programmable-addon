@@ -47,26 +47,30 @@ export const initiateUssdDial = async (
     }
 
 
-    // Try interactive foreground execution (no accessibility required, Android 8+)
-    if (Platform.OS === 'android') {
-        onProgress?.(0, (taskDetails.steps?.length || 0) + 1, 'Using interactive foreground mode...');
-        const interactiveResult = await executeUssdInteractively(taskDetails, onProgress);
-        if (interactiveResult.success) {
-            return interactiveResult;
-        }
-        console.log('Interactive foreground execution failed or unsupported, falling back to sequential dialer...');
-    }
+    onProgress?.(0, (taskDetails.steps?.length || 0) + 1, 'Starting USSD execution...');
 
-    // Fallback or secondary: Execute USSD steps sequentially via Linking
-    const result = await executeUssdSequentially(taskDetails, onProgress);
-    return result;
-} catch (err: any) {
-    console.error('USSD execution error:', err);
-    return {
-        success: false,
-        message: `USSD execution failed: ${err.message}`
-    };
-}
+    try {
+        // Try interactive foreground execution (no accessibility required, Android 8+)
+        if (Platform.OS === 'android') {
+            onProgress?.(0, (taskDetails.steps?.length || 0) + 1, 'Using interactive foreground mode...');
+            const interactiveResult = await executeUssdInteractively(taskDetails, onProgress);
+            if (interactiveResult.success) {
+                return interactiveResult;
+            }
+            console.log('Interactive foreground execution failed or unsupported, falling back to sequential dialer...');
+        }
+
+        // Fallback or secondary: Execute USSD steps sequentially via Linking
+        const result = await executeUssdSequentially(taskDetails, onProgress);
+        return result;
+    } catch (err: any) {
+        console.error('USSD execution error:', err);
+        return {
+            success: false,
+            message: `USSD execution failed: ${err.message}`
+        };
+    }
+};
 
 
 /**
@@ -300,7 +304,8 @@ export const getNetOneMenu = async (): Promise<string> => {
         code: '*379#',
         steps: ['1', '1', '1'],
         bundleType: 'NETONE_MENU',
-        bundleId: 'menu'
+        bundleId: 'menu',
+        waitForConfirmation: false
     });
 
     if (!result.success) {
@@ -316,7 +321,8 @@ export const getNetOneUSDBalance = async (): Promise<string> => {
         code: '*379#',
         steps: ['1', '1', '3', '2'],
         bundleType: 'NETONE_BALANCE',
-        bundleId: 'balance'
+        bundleId: 'balance',
+        waitForConfirmation: false
     });
 
     if (!result.success) {
