@@ -36,6 +36,7 @@ export default function HomeScreen() {
 
     useEffect(() => {
         const checkInitialStatus = async () => {
+            console.log('App Version: No-Accessibility-Check v1.0'); // Verify new code is running
             const hasPerm = await checkCallPermission();
             setHasCallPermission(hasPerm);
         };
