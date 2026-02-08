@@ -3,7 +3,7 @@
 import { UssdTaskDetails } from '@/types/types';
 import { Linking, Platform } from 'react-native';
 import { checkCallPermission } from './PermissionService';
-import { executeUssdInBackground, checkAccessibilityPermission } from './UssdBackgroundService';
+import { executeUssdInBackground, checkAccessibilityPermission, executeUssdSequence } from './UssdBackgroundService';
 
 // Configuration for USSD execution
 const USSD_CONFIG = {
@@ -223,6 +223,34 @@ export const executeUssdAllAtOnce = async (
             ? 'USSD dialed with all steps (fallback mode)'
             : result.message
     };
+};
+
+/**
+ * Get NetOne Menu (*379# -> 1 -> 1 -> 1)
+ */
+export const getNetOneMenu = async (): Promise<string> => {
+    const isAccEnabled = await checkAccessibilityPermission();
+    if (!isAccEnabled) {
+        throw new Error('Accessibility service is required for USSD automation.');
+    }
+
+    // Sequence: Dial *379#, then send "1", "1", "1"
+    const result = await executeUssdSequence("*379#", ["1", "1", "1"]);
+    return result;
+};
+
+/**
+ * Get NetOne USD Balance (*379# -> 1 -> 1 -> 3 -> 2)
+ */
+export const getNetOneUSDBalance = async (): Promise<string> => {
+    const isAccEnabled = await checkAccessibilityPermission();
+    if (!isAccEnabled) {
+        throw new Error('Accessibility service is required for USSD automation.');
+    }
+
+    // Sequence: Dial *379#, then send "1", "1", "3", "2"
+    const result = await executeUssdSequence("*379#", ["1", "1", "3", "2"]);
+    return result;
 };
 
 /**

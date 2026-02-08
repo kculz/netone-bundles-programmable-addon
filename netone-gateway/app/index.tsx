@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Platform,
 import { UssdResponseCaptureModal } from '@/components/UssdResponseCaptureModal';
 import { checkCallPermission, requestAllPermissions, openAppSettings } from '@/services/PermissionService';
 import { checkAccessibilityPermission, requestAccessibilityPermission } from '@/services/UssdBackgroundService';
+import { getNetOneMenu, getNetOneUSDBalance } from '@/services/UssdAutomation';
+import { UssdResultModal } from '@/components/UssdResultModal';
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
@@ -18,6 +20,11 @@ export default function HomeScreen() {
     const [isPermissionBlocked, setIsPermissionBlocked] = useState(false);
     const [isExpoGo, setIsExpoGo] = useState(false);
     const [isAccessibilityEnabled, setIsAccessibilityEnabled] = useState(false);
+    const [isExecuting, setIsExecuting] = useState(false);
+    const [currentAction, setCurrentAction] = useState<'menu' | 'balance' | null>(null);
+    const [showResultModal, setShowResultModal] = useState(false);
+    const [resultTitle, setResultTitle] = useState('');
+    const [resultText, setResultText] = useState('');
 
     const tasks = useSelector((state: RootState) => state.tasks.items);
     const lastBalance = useSelector((state: RootState) => state.tasks.lastBalance);
@@ -88,6 +95,48 @@ export default function HomeScreen() {
     const handleReconnect = () => {
         if (!isConnected) {
             socketService.connect();
+        }
+    };
+
+    const handleGetMenu = async () => {
+        if (!isAccessibilityEnabled) {
+            Alert.alert('Accessibility Required', 'Please enable Accessibility Service first.');
+            return;
+        }
+
+        setIsExecuting(true);
+        setCurrentAction('menu');
+        try {
+            const menu = await getNetOneMenu();
+            setResultTitle('NetOne Menu');
+            setResultText(menu);
+            setShowResultModal(true);
+        } catch (error: any) {
+            Alert.alert('USSD Error', error.message || 'Failed to retrieve menu');
+        } finally {
+            setIsExecuting(false);
+            setCurrentAction(null);
+        }
+    };
+
+    const handleGetBalance = async () => {
+        if (!isAccessibilityEnabled) {
+            Alert.alert('Accessibility Required', 'Please enable Accessibility Service first.');
+            return;
+        }
+
+        setIsExecuting(true);
+        setCurrentAction('balance');
+        try {
+            const balance = await getNetOneUSDBalance();
+            setResultTitle('USD Balance Result');
+            setResultText(balance);
+            setShowResultModal(true);
+        } catch (error: any) {
+            Alert.alert('USSD Error', error.message || 'Failed to check balance');
+        } finally {
+            setIsExecuting(false);
+            setCurrentAction(null);
         }
     };
 
@@ -209,6 +258,35 @@ export default function HomeScreen() {
                     </View>
                 </View>
 
+                {/* Local USSD Actions */}
+                <View style={styles.card}>
+                    <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 15 }]}>Direct Actions</Text>
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity
+                            style={[styles.actionBtn, isExecuting && styles.disabledBtn]}
+                            onPress={handleGetMenu}
+                            disabled={isExecuting}
+                        >
+                            <Text style={styles.actionBtnText}>
+                                {isExecuting && currentAction === 'menu' ? 'Dialing...' : 'Get NetOne Menu'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.actionBtn, isExecuting && styles.disabledBtn]}
+                            onPress={handleGetBalance}
+                            disabled={isExecuting}
+                        >
+                            <Text style={styles.actionBtnText}>
+                                {isExecuting && currentAction === 'balance' ? 'Checking...' : 'Check USD Balance'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                    {isExecuting && (
+                        <Text style={styles.statusHint}>Automating sequence on screen...</Text>
+                    )}
+                </View>
+
                 <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
                     {/* Active Tasks Section */}
@@ -281,6 +359,14 @@ export default function HomeScreen() {
                     taskDescription={responseCaptureState.taskDescription}
                     onSubmit={handleResponseSubmit}
                     onSkip={handleResponseSkip}
+                />
+
+                {/* Local USSD Result Modal */}
+                <UssdResultModal
+                    visible={showResultModal}
+                    title={resultTitle}
+                    result={resultText}
+                    onClose={() => setShowResultModal(false)}
                 />
             </SafeAreaView>
         </LinearGradient>
@@ -453,5 +539,34 @@ const styles = StyleSheet.create({
         color: '#4A5568',
         fontSize: 12,
         fontWeight: '600',
+    },
+    actionRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 5,
+    },
+    actionBtn: {
+        flex: 1,
+        backgroundColor: '#4CAF50',
+        paddingVertical: 12,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    actionBtnText: {
+        color: '#fff',
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    disabledBtn: {
+        opacity: 0.6,
+        backgroundColor: '#607D8B',
+    },
+    statusHint: {
+        color: '#A0AEC0',
+        fontSize: 11,
+        fontStyle: 'italic',
+        marginTop: 10,
+        textAlign: 'center',
     },
 });

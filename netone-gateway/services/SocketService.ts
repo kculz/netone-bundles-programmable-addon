@@ -3,7 +3,7 @@
 import { TaskResult, UssdTaskDetails, TaskProgress, TaskError, ConfirmationRequest } from '@/types/types';
 import io, { Socket } from 'socket.io-client';
 
-const SERVER_URL = 'http://192.168.1.113:3000'; 
+const SERVER_URL = 'http://10.225.216.114:3000'; 
 
 class SocketService {
     public socket: Socket;

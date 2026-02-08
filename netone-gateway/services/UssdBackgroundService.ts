@@ -116,9 +116,9 @@ export const requestAccessibilityPermission = (): void => {
  */
 export const useUssdResponseListener = (
     onResponse: (response: string) => void
-): void => {
+): (() => void) => {
     if (Platform.OS !== 'android' || !UssdModule) {
-        return;
+        return () => { };
     }
 
     const eventEmitter = new NativeEventEmitter(NativeModules.UssdModule);
@@ -131,6 +131,54 @@ export const useUssdResponseListener = (
     return () => {
         subscription.remove();
     };
+};
+
+/**
+ * Execute a USSD sequence and wait for the final response
+ */
+export const executeUssdSequence = (
+    code: string,
+    steps: string[],
+    timeoutMs: number = 20000
+): Promise<string> => {
+    return new Promise(async (resolve, reject) => {
+        if (Platform.OS !== 'android' || !UssdModule) {
+            return reject(new Error('USSD automation only supported on Android'));
+        }
+
+        const isAccEnabled = await checkAccessibilityPermission();
+        if (!isAccEnabled) {
+            return reject(new Error('Accessibility service not enabled'));
+        }
+
+        let responseCount = 0;
+        const totalExpectedResponses = steps.length + 1;
+        let timeout: NodeJS.Timeout;
+
+        const unsubscribe = useUssdResponseListener((response) => {
+            responseCount++;
+            console.log(`Response ${responseCount}/${totalExpectedResponses}:`, response);
+
+            if (responseCount === totalExpectedResponses) {
+                clearTimeout(timeout);
+                unsubscribe();
+                resolve(response);
+            }
+        });
+
+        timeout = setTimeout(() => {
+            unsubscribe();
+            reject(new Error('USSD request timed out'));
+        }, timeoutMs);
+
+        try {
+            await UssdModule.executeUssd(code, steps);
+        } catch (error) {
+            clearTimeout(timeout);
+            unsubscribe();
+            reject(error);
+        }
+    });
 };
 
 export default {
