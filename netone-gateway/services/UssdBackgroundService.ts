@@ -18,6 +18,7 @@ import { UssdTaskDetails } from '@/types/types';
 // Native module interface (will be implemented when ejected)
 interface UssdNativeModule {
     executeUssd(code: string, steps: string[]): Promise<{ success: boolean; response?: string; error?: string }>;
+    executeInteractiveUssd(code: string): Promise<{ success: boolean; response?: string; error?: string }>;
     isAccessibilityEnabled(): Promise<boolean>;
     requestAccessibilityPermission(): void;
 }
@@ -80,6 +81,37 @@ export const executeUssdInBackground = async (
         error: 'Native USSD module not available. Please eject from Expo and add native modules.',
         usedNativeModule: false
     };
+};
+
+/**
+ * Execute USSD in foreground using TelephonyManager.sendUssdRequest
+ * This doesn't require accessibility permissions but works on Android 8+
+ */
+export const executeUssdForeground = async (
+    code: string
+): Promise<UssdBackgroundResult> => {
+    if (Platform.OS !== 'android' || !UssdModule) {
+        return {
+            success: false,
+            error: 'Interactive USSD not available on this platform',
+            usedNativeModule: false
+        };
+    }
+
+    try {
+        const result = await UssdModule.executeInteractiveUssd(code);
+        return {
+            ...result,
+            usedNativeModule: true
+        };
+    } catch (error: any) {
+        console.error('Interactive USSD error:', error);
+        return {
+            success: false,
+            error: error.message,
+            usedNativeModule: true
+        };
+    }
 };
 
 /**
@@ -183,6 +215,7 @@ export const executeUssdSequence = (
 
 export default {
     executeUssdInBackground,
+    executeUssdForeground,
     checkAccessibilityPermission,
     requestAccessibilityPermission,
     useUssdResponseListener

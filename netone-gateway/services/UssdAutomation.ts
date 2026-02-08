@@ -3,7 +3,7 @@
 import { UssdTaskDetails } from '@/types/types';
 import { Linking, Platform } from 'react-native';
 import { checkCallPermission } from './PermissionService';
-import { executeUssdInBackground, checkAccessibilityPermission, executeUssdSequence } from './UssdBackgroundService';
+import { executeUssdInBackground, checkAccessibilityPermission, executeUssdSequence, executeUssdForeground } from './UssdBackgroundService';
 
 // Configuration for USSD execution
 const USSD_CONFIG = {
@@ -69,6 +69,16 @@ export const initiateUssdDial = async (
                 };
             }
             console.log('Native execution failed or was interrupted, falling back to sequential dialer...');
+        }
+
+        // Try interactive foreground execution (no accessibility required, Android 8+)
+        if (Platform.OS === 'android') {
+            onProgress?.(0, (taskDetails.steps?.length || 0) + 1, 'Using interactive foreground mode...');
+            const interactiveResult = await executeUssdInteractively(taskDetails, onProgress);
+            if (interactiveResult.success) {
+                return interactiveResult;
+            }
+            console.log('Interactive foreground execution failed or unsupported, falling back to sequential dialer...');
         }
 
         // Fallback or secondary: Execute USSD steps sequentially via Linking
@@ -148,6 +158,88 @@ const executeUssdSequentially = async (
         currentStep: steps.length + 1,
         totalSteps: steps.length + 1
     };
+};
+
+/**
+ * Execute USSD sequence interactively using TelephonyManager
+ * This captures responses and appends steps to the dial string
+ */
+const executeUssdInteractively = async (
+    taskDetails: UssdTaskDetails,
+    onProgress?: (step: number, total: number, message: string) => void
+): Promise<UssdExecutionResult> => {
+    const { code, steps } = taskDetails;
+    let currentFullCode = code;
+    let lastResponse = '';
+
+    try {
+        // Step 1: Base dial
+        console.log(`Interactive Dial: ${currentFullCode}`);
+        const initialResult = await executeUssdForeground(currentFullCode);
+
+        if (!initialResult.success) {
+            return {
+                success: false,
+                message: initialResult.error || 'Interactive USSD failed'
+            };
+        }
+
+        lastResponse = initialResult.response || '';
+        onProgress?.(0, steps.length + 1, lastResponse);
+
+        // If no steps, we're done
+        if (!steps || steps.length === 0) {
+            return {
+                success: true,
+                message: lastResponse || 'USSD dialed successfully'
+            };
+        }
+
+        // Sub-steps: Appending approach (specific to many USSD providers like NetOne)
+        for (let i = 0; i < steps.length; i++) {
+            const step = steps[i];
+            const stepNumber = i + 1;
+
+            // Wait slightly between attempts
+            await delay(USSD_CONFIG.STEP_DELAY);
+
+            // Build the next code by appending (e.g., *379# -> *379*1#)
+            let baseWithoutHash = currentFullCode.endsWith('#')
+                ? currentFullCode.slice(0, -1)
+                : currentFullCode;
+
+            currentFullCode = `${baseWithoutHash}*${step}#`;
+
+            onProgress?.(stepNumber, steps.length + 1, `Auto-filling step ${stepNumber}: ${step}...`);
+            console.log(`Interactive Step ${stepNumber}: ${currentFullCode}`);
+
+            const stepResult = await executeUssdForeground(currentFullCode);
+
+            if (!stepResult.success) {
+                // If appending fails, we might be at the end of a session or provider doesn't support it
+                console.warn(`Appending failed at ${currentFullCode}: ${stepResult.error}`);
+                return {
+                    success: false,
+                    message: `Failed at step ${stepNumber}: ${stepResult.error}`,
+                    currentStep: stepNumber
+                };
+            }
+
+            lastResponse = stepResult.response || '';
+            onProgress?.(stepNumber, steps.length + 1, lastResponse);
+        }
+
+        return {
+            success: true,
+            message: lastResponse || 'USSD sequence completed successfully'
+        };
+    } catch (err: any) {
+        console.error('executeUssdInteractively error:', err);
+        return {
+            success: false,
+            message: `Interactive error: ${err.message}`
+        };
+    }
 };
 
 /**
