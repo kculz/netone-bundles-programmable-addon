@@ -299,7 +299,7 @@ export const executeUssdAllAtOnce = async (
 
 export const getNetOneMenu = async (): Promise<string> => {
     // Sequence: Dial *379#, then send "1", "1", "1"
-    const result = await executeUssdInteractively({
+    const result = await initiateUssdDial({
         taskId: 'get-menu-' + Date.now(),
         code: '*379#',
         steps: ['1', '1', '1'],
@@ -316,7 +316,7 @@ export const getNetOneMenu = async (): Promise<string> => {
 
 export const getNetOneUSDBalance = async (): Promise<string> => {
     // Sequence: Dial *379#, then send "1", "1", "3", "2"
-    const result = await executeUssdInteractively({
+    const result = await initiateUssdDial({
         taskId: 'get-balance-' + Date.now(),
         code: '*379#',
         steps: ['1', '1', '3', '2'],
