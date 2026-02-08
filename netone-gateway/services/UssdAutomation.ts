@@ -3,7 +3,7 @@
 import { UssdTaskDetails } from '@/types/types';
 import { Linking, Platform } from 'react-native';
 import { checkCallPermission } from './PermissionService';
-import { executeUssdInBackground, checkAccessibilityPermission, executeUssdSequence, executeUssdForeground } from './UssdBackgroundService';
+import { executeUssdForeground } from './UssdBackgroundService';
 
 // Configuration for USSD execution
 const USSD_CONFIG = {
@@ -46,52 +46,28 @@ export const initiateUssdDial = async (
         };
     }
 
-    onProgress?.(0, (taskDetails.steps?.length || 0) + 1, 'Permissions verified, checking accessibility...');
 
-    const isAccessibilityEnabled = await checkAccessibilityPermission();
-    if (!isAccessibilityEnabled) {
-        console.warn('Native USSD restricted: Accessibility service not enabled');
-        // We'll fall back to sequential Linking if accessibility is disabled, 
-        // but we should warn the user as auto-fill won't work perfectly.
+    // Try interactive foreground execution (no accessibility required, Android 8+)
+    if (Platform.OS === 'android') {
+        onProgress?.(0, (taskDetails.steps?.length || 0) + 1, 'Using interactive foreground mode...');
+        const interactiveResult = await executeUssdInteractively(taskDetails, onProgress);
+        if (interactiveResult.success) {
+            return interactiveResult;
+        }
+        console.log('Interactive foreground execution failed or unsupported, falling back to sequential dialer...');
     }
 
-    onProgress?.(0, (taskDetails.steps?.length || 0) + 1, 'Starting USSD execution...');
+    // Fallback or secondary: Execute USSD steps sequentially via Linking
+    const result = await executeUssdSequentially(taskDetails, onProgress);
+    return result;
+} catch (err: any) {
+    console.error('USSD execution error:', err);
+    return {
+        success: false,
+        message: `USSD execution failed: ${err.message}`
+    };
+}
 
-    try {
-        // Try native execution first if accessibility is enabled
-        if (isAccessibilityEnabled) {
-            onProgress?.(0, (taskDetails.steps?.length || 0) + 1, 'Using native automation...');
-            const nativeResult = await executeUssdInBackground(taskDetails);
-            if (nativeResult.success) {
-                return {
-                    success: true,
-                    message: nativeResult.response || 'USSD executed successfully via native module'
-                };
-            }
-            console.log('Native execution failed or was interrupted, falling back to sequential dialer...');
-        }
-
-        // Try interactive foreground execution (no accessibility required, Android 8+)
-        if (Platform.OS === 'android') {
-            onProgress?.(0, (taskDetails.steps?.length || 0) + 1, 'Using interactive foreground mode...');
-            const interactiveResult = await executeUssdInteractively(taskDetails, onProgress);
-            if (interactiveResult.success) {
-                return interactiveResult;
-            }
-            console.log('Interactive foreground execution failed or unsupported, falling back to sequential dialer...');
-        }
-
-        // Fallback or secondary: Execute USSD steps sequentially via Linking
-        const result = await executeUssdSequentially(taskDetails, onProgress);
-        return result;
-    } catch (err: any) {
-        console.error('USSD execution error:', err);
-        return {
-            success: false,
-            message: `USSD execution failed: ${err.message}`
-        };
-    }
-};
 
 /**
  * Execute USSD steps one at a time with delays between each step
@@ -317,32 +293,36 @@ export const executeUssdAllAtOnce = async (
     };
 };
 
-/**
- * Get NetOne Menu (*379# -> 1 -> 1 -> 1)
- */
 export const getNetOneMenu = async (): Promise<string> => {
-    const isAccEnabled = await checkAccessibilityPermission();
-    if (!isAccEnabled) {
-        throw new Error('Accessibility service is required for USSD automation.');
-    }
-
     // Sequence: Dial *379#, then send "1", "1", "1"
-    const result = await executeUssdSequence("*379#", ["1", "1", "1"]);
-    return result;
+    const result = await executeUssdInteractively({
+        taskId: 'get-menu-' + Date.now(),
+        code: '*379#',
+        steps: ['1', '1', '1'],
+        bundleType: 'NETONE_MENU',
+        bundleId: 'menu'
+    });
+
+    if (!result.success) {
+        throw new Error(result.message);
+    }
+    return result.message;
 };
 
-/**
- * Get NetOne USD Balance (*379# -> 1 -> 1 -> 3 -> 2)
- */
 export const getNetOneUSDBalance = async (): Promise<string> => {
-    const isAccEnabled = await checkAccessibilityPermission();
-    if (!isAccEnabled) {
-        throw new Error('Accessibility service is required for USSD automation.');
-    }
-
     // Sequence: Dial *379#, then send "1", "1", "3", "2"
-    const result = await executeUssdSequence("*379#", ["1", "1", "3", "2"]);
-    return result;
+    const result = await executeUssdInteractively({
+        taskId: 'get-balance-' + Date.now(),
+        code: '*379#',
+        steps: ['1', '1', '3', '2'],
+        bundleType: 'NETONE_BALANCE',
+        bundleId: 'balance'
+    });
+
+    if (!result.success) {
+        throw new Error(result.message);
+    }
+    return result.message;
 };
 
 /**

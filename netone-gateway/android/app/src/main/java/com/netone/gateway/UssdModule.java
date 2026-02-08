@@ -10,8 +10,6 @@ import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import android.content.Intent;
 import android.net.Uri;
-import android.provider.Settings;
-import android.view.accessibility.AccessibilityManager;
 import android.content.Context;
 import android.util.Log;
 import android.telephony.TelephonyManager;
@@ -33,35 +31,6 @@ public class UssdModule extends ReactContextBaseJavaModule {
         return "UssdModule";
     }
 
-    @ReactMethod
-    public void executeUssd(String code, ReadableArray steps, Promise promise) {
-        try {
-            if (!isAccessibilityServiceEnabled()) {
-                promise.reject("ACCESSIBILITY_DISABLED", "Accessibility service is not enabled.");
-                return;
-            }
-
-            String[] stepsArray = new String[steps.size()];
-            for (int i = 0; i < steps.size(); i++) {
-                stepsArray[i] = steps.getString(i);
-            }
-            UssdAccessibilityService.setUssdSteps(stepsArray);
-
-            Log.d(TAG, "Executing USSD: " + code);
-            String encodedCode = Uri.encode(code);
-            Intent intent = new Intent(Intent.ACTION_CALL);
-            intent.setData(Uri.parse("tel:" + encodedCode));
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            
-            getReactApplicationContext().startActivity(intent);
-
-            WritableMap result = Arguments.createMap();
-            result.putBoolean("success", true);
-            promise.resolve(result);
-        } catch (Exception e) {
-            promise.reject("USSD_ERROR", e.getMessage());
-        }
-    }
 
     @ReactMethod
     public void executeInteractiveUssd(String code, final Promise promise) {
@@ -102,26 +71,6 @@ public class UssdModule extends ReactContextBaseJavaModule {
         }
     }
 
-    @ReactMethod
-    public void isAccessibilityEnabled(Promise promise) {
-        promise.resolve(isAccessibilityServiceEnabled());
-    }
-
-    @ReactMethod
-    public void requestAccessibilityPermission() {
-        Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        reactContext.startActivity(intent);
-    }
-
-    private boolean isAccessibilityServiceEnabled() {
-        String serviceName = reactContext.getPackageName() + "/" + UssdAccessibilityService.class.getCanonicalName();
-        String enabledServices = Settings.Secure.getString(
-            reactContext.getContentResolver(),
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        );
-        return enabledServices != null && enabledServices.contains(serviceName);
-    }
 
     public static void sendUssdResponse(String response) {
         if (reactContext != null) {
