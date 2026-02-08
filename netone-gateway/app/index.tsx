@@ -3,7 +3,6 @@ import socketService from '@/services/SocketService';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Platform, SafeAreaView, Alert } from 'react-native';
 import { UssdResponseCaptureModal } from '@/components/UssdResponseCaptureModal';
 import { checkCallPermission, requestAllPermissions, openAppSettings } from '@/services/PermissionService';
-import { checkAccessibilityPermission, requestAccessibilityPermission } from '@/services/UssdBackgroundService';
 import { getNetOneMenu, getNetOneUSDBalance } from '@/services/UssdAutomation';
 import { UssdResultModal } from '@/components/UssdResultModal';
 import { useState, useEffect } from 'react';
@@ -19,7 +18,6 @@ export default function HomeScreen() {
     const [hasCallPermission, setHasCallPermission] = useState<boolean | null>(null);
     const [isPermissionBlocked, setIsPermissionBlocked] = useState(false);
     const [isExpoGo, setIsExpoGo] = useState(false);
-    const [isAccessibilityEnabled, setIsAccessibilityEnabled] = useState(false);
     const [isExecuting, setIsExecuting] = useState(false);
     const [currentAction, setCurrentAction] = useState<'menu' | 'balance' | null>(null);
     const [showResultModal, setShowResultModal] = useState(false);
@@ -53,9 +51,6 @@ export default function HomeScreen() {
             const hasPerm = await checkCallPermission();
             setHasCallPermission(hasPerm);
 
-            // Check accessibility status
-            const isAccEnabled = await checkAccessibilityPermission();
-            setIsAccessibilityEnabled(isAccEnabled);
         }, 1000);
 
         return () => clearInterval(checkStatus);
@@ -98,12 +93,8 @@ export default function HomeScreen() {
         }
     };
 
-    const handleGetMenu = async () => {
-        if (!isAccessibilityEnabled) {
-            Alert.alert('Accessibility Required', 'Please enable Accessibility Service first.');
-            return;
-        }
 
+    const handleGetMenu = async () => {
         setIsExecuting(true);
         setCurrentAction('menu');
         try {
@@ -119,12 +110,8 @@ export default function HomeScreen() {
         }
     };
 
-    const handleGetBalance = async () => {
-        if (!isAccessibilityEnabled) {
-            Alert.alert('Accessibility Required', 'Please enable Accessibility Service first.');
-            return;
-        }
 
+    const handleGetBalance = async () => {
         setIsExecuting(true);
         setCurrentAction('balance');
         try {
@@ -203,29 +190,6 @@ export default function HomeScreen() {
                         <Text style={[styles.taskMessage, { marginTop: 10, fontSize: 11, fontStyle: 'italic' }]}>
                             ⚠️ USSD automation requires a Development Build or Ejection.
                         </Text>
-                    )}
-                    <View style={styles.row}>
-                        <Text style={styles.label}>Accessibility</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <View style={[
-                                styles.statusDot,
-                                { backgroundColor: isAccessibilityEnabled ? '#4CAF50' : '#FF9800' }
-                            ]} />
-                            <Text style={[
-                                styles.value,
-                                { color: isAccessibilityEnabled ? '#4CAF50' : '#FF9800' }
-                            ]}>
-                                {isAccessibilityEnabled ? 'ENABLED' : 'DISABLED'}
-                            </Text>
-                        </View>
-                    </View>
-                    {!isAccessibilityEnabled && !isExpoGo && (
-                        <TouchableOpacity
-                            style={[styles.reconnectBtn, { backgroundColor: '#5D4037', marginTop: 5 }]}
-                            onPress={requestAccessibilityPermission}
-                        >
-                            <Text style={styles.reconnectText}>Enable Accessibility</Text>
-                        </TouchableOpacity>
                     )}
                     <View style={styles.divider} />
                     <View style={styles.row}>
